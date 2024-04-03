@@ -16,7 +16,18 @@ export class UserService {
   ) {}
 
   findAllUsers() {
-    return this.userRepository.find({ relations: ['profile'] });
+    return this.userRepository.find({
+      relations: ['profile'],
+      select: ['id', 'username', 'email', 'name', 'createdAt', 'profile'],
+    });
+  }
+
+  findUserById(id: number) {
+    return this.userRepository.findOne({
+      select: ['id', 'username', 'email'],
+      relations: ['profile'],
+      where: { id },
+    });
   }
 
   async createUser(userDetails: UserParams) {
