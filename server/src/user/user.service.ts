@@ -1,5 +1,6 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { Profile } from 'src/typeorm/entities/Profile';
 import { User } from 'src/typeorm/entities/User';
 import { sendMail } from 'src/utils/mail';
@@ -11,10 +12,11 @@ export class UserService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Profile) private profileRepository: Repository<Profile>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   findAllUsers() {
-    return this.userRepository.find();
+    return this.userRepository.find({ relations: ['profile'] });
   }
 
   async createUser(userDetails: UserParams) {
@@ -49,5 +51,27 @@ export class UserService {
     return this.userRepository.save(newUser);
   }
 
-  async createUserProfile(profileDetails: ProfileParams) {}
+  async createUserProfile(id: number, file: Express.Multer.File, profileDetails: ProfileParams) {
+    const existingUser = await this.userRepository.findOneBy({ id });
+
+    if (!existingUser) throw new HttpException('User not found', 404);
+
+    const uploadedFile = await this.cloudinaryService
+      .uploadFile(file)
+      .catch((err: any) => console.log(err));
+
+    // @ts-ignore
+    const avatarUrl = uploadedFile.secure_url;
+
+    const newProfile = this.profileRepository.create({
+      ...profileDetails,
+      avatarUrl,
+    });
+
+    const savedProfile = await this.profileRepository.save(newProfile);
+
+    existingUser.profile = savedProfile;
+
+    return this.userRepository.save(existingUser);
+  }
 }

@@ -7,5 +7,5 @@ export type UserParams = {
 
 export type ProfileParams = {
   location: string;
-  avatar: any;
+  // avatar: any;
 };
