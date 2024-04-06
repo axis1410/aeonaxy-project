@@ -9,7 +9,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { CreateProfileDto } from './dto/CreateProfileDto';
+
 import { CreateUserDto } from './dto/CreateUserDto';
 import { UserService } from './user.service';
 
@@ -28,20 +28,8 @@ export class UserController {
   }
 
   @Post('/register')
-  createUser(@Body() createUserDto: CreateUserDto) {
-    return this.userService.createUser(createUserDto);
-  }
-
-  @Post('/:id/profile/create')
   @UseInterceptors(FileInterceptor('file'))
-  uploadProfilePicture(
-    @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File,
-    @Body() createProfileDto: CreateProfileDto,
-  ) {
-    console.log(id);
-    console.log(file);
-    console.log(createProfileDto);
-    return this.userService.createUserProfile(id, file, createProfileDto);
+  createUser(@Body() createUserDto: CreateUserDto, @UploadedFile() file: Express.Multer.File) {
+    return this.userService.createUser(createUserDto, file);
   }
 }

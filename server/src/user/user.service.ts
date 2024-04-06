@@ -1,10 +1,11 @@
 import { HttpException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ResendService } from 'nestjs-resend';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { Profile } from 'src/typeorm/entities/Profile';
 import { User } from 'src/typeorm/entities/User';
-import { sendMail } from 'src/utils/mail';
-import { ProfileParams, UserParams } from 'src/utils/types';
+import { UserParams } from 'src/utils/types';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -13,6 +14,8 @@ export class UserService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @InjectRepository(Profile) private profileRepository: Repository<Profile>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly resendService: ResendService,
+    private readonly configService: ConfigService,
   ) {}
 
   findAllUsers() {
@@ -30,7 +33,7 @@ export class UserService {
     });
   }
 
-  async createUser(userDetails: UserParams) {
+  async createUser(userDetails: UserParams, file: Express.Multer.File) {
     console.log(userDetails);
     const existingUserByUsername = await this.userRepository.findOneBy({
       username: userDetails.username,
@@ -57,16 +60,6 @@ export class UserService {
       createdAt: new Date(),
     });
 
-    sendMail();
-
-    return this.userRepository.save(newUser);
-  }
-
-  async createUserProfile(id: number, file: Express.Multer.File, profileDetails: ProfileParams) {
-    const existingUser = await this.userRepository.findOneBy({ id });
-
-    if (!existingUser) throw new HttpException('User not found', 404);
-
     const uploadedFile = await this.cloudinaryService
       .uploadFile(file)
       .catch((err: any) => console.log(err));
@@ -75,14 +68,21 @@ export class UserService {
     const avatarUrl = uploadedFile.secure_url;
 
     const newProfile = this.profileRepository.create({
-      ...profileDetails,
+      location: userDetails.location,
       avatarUrl,
     });
 
     const savedProfile = await this.profileRepository.save(newProfile);
 
-    existingUser.profile = savedProfile;
+    newUser.profile = savedProfile;
 
-    return this.userRepository.save(existingUser);
+    await this.resendService.send({
+      from: this.configService.get<string>('RESEND_SENDER'),
+      to: this.configService.get<string>('RESEND_RECEIVER'),
+      subject: 'Registration Successful',
+      html: 'Hello <a>Click here to complete verification</a>',
+    });
+
+    return this.userRepository.save(newUser);
   }
 }
