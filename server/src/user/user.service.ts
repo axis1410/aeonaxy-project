@@ -1,6 +1,7 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcryptjs';
 import { ResendService } from 'nestjs-resend';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { Profile } from 'src/typeorm/entities/Profile';
@@ -54,6 +55,9 @@ export class UserService {
     if (existingUserByEmail) {
       throw new HttpException('Email already exists', 400);
     }
+
+    const hashedPassword = await bcrypt.hash(userDetails.password, 10);
+    userDetails.password = hashedPassword;
 
     const newUser = this.userRepository.create({
       ...userDetails,

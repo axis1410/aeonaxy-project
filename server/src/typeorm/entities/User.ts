@@ -1,4 +1,14 @@
-import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { UserInterests } from './Interests';
 import { Profile } from './Profile';
 
 @Entity()
@@ -24,4 +34,8 @@ export class User {
   @OneToOne(() => Profile)
   @JoinColumn()
   profile: Profile;
+
+  // @ManyToMany(() => UserInterests)
+  // @JoinTable()
+  // interests: UserInterests[];
 }
